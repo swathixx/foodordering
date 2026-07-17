@@ -1,0 +1,10 @@
+com\foodorder\kitchen\config\JmsConfig.class
+com\foodorder\kitchen\controller\KitchenController.class
+com\foodorder\kitchen\KitchenServiceApplication.class
+com\foodorder\kitchen\model\KitchenStatus.class
+com\foodorder\kitchen\event\KitchenCompletedEvent.class
+com\foodorder\kitchen\model\KitchenOrder.class
+com\foodorder\kitchen\model\KitchenOrder$KitchenOrderBuilder.class
+com\foodorder\kitchen\event\KitchenPendingEvent.class
+com\foodorder\kitchen\consumer\KitchenEventConsumer.class
+com\foodorder\kitchen\repository\KitchenOrderRepository.class

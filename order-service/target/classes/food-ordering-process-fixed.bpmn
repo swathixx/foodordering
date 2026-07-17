@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  
+  <bpmn:message id="Message_PaymentCompleted" name="paymentCompletedMessage"/>
+  <bpmn:message id="Message_KitchenCompleted" name="kitchenCompletedMessage"/>
+  <bpmn:message id="Message_DeliveryCompleted" name="deliveryCompletedMessage"/>
+
+  <bpmn:process id="food-ordering-process" name="Food Ordering Process" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Order Created">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ReceivePaymentCompleted"/>
+    
+    <bpmn:receiveTask id="ReceivePaymentCompleted" name="Receive Payment Completed" messageRef="Message_PaymentCompleted">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:receiveTask>
+    
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ReceivePaymentCompleted" targetRef="Gateway_CheckPayment"/>
+    
+    <bpmn:exclusiveGateway id="Gateway_CheckPayment" name="Payment Success?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaySuccess</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PayFailed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <bpmn:sequenceFlow id="Flow_PaySuccess" name="Yes" sourceRef="Gateway_CheckPayment" targetRef="Service_UpdatePaid">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'SUCCESS'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_PayFailed" name="No" sourceRef="Gateway_CheckPayment" targetRef="Service_UpdateFailed">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'FAILED'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:serviceTask id="Service_UpdatePaid" name="Update Order Paid &amp; Request Kitchen" camunda:delegateExpression="${updateStatusPaidDelegate}">
+      <bpmn:incoming>Flow_PaySuccess</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Service_UpdatePaid" targetRef="ReceiveKitchenCompleted"/>
+    
+    <bpmn:receiveTask id="ReceiveKitchenCompleted" name="Receive Kitchen Completed" messageRef="Message_KitchenCompleted">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:receiveTask>
+    
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ReceiveKitchenCompleted" targetRef="Service_UpdatePrepared"/>
+    
+    <bpmn:serviceTask id="Service_UpdatePrepared" name="Update Order Prepared &amp; Request Delivery" camunda:delegateExpression="${updateStatusPreparedDelegate}">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Service_UpdatePrepared" targetRef="ReceiveDeliveryCompleted"/>
+    
+    <bpmn:receiveTask id="ReceiveDeliveryCompleted" name="Receive Delivery Completed" messageRef="Message_DeliveryCompleted">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:receiveTask>
+    
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="ReceiveDeliveryCompleted" targetRef="Service_UpdateDelivered"/>
+    
+    <bpmn:serviceTask id="Service_UpdateDelivered" name="Update Order Delivered" camunda:delegateExpression="${updateStatusDeliveredDelegate}">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="EndEvent_1" name="Order Delivered">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:serviceTask id="Service_UpdateFailed" name="Update Order Failed" camunda:delegateExpression="${updateStatusFailedDelegate}">
+      <bpmn:incoming>Flow_PayFailed</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="EndEvent_2" name="Order Failed">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Service_UpdateDelivered" targetRef="EndEvent_1"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Service_UpdateFailed" targetRef="EndEvent_2"/>
+  </bpmn:process>
+</bpmn:definitions>
